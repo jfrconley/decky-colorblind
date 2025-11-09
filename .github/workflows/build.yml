@@ -1,0 +1,80 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  build:
+    name: Build Plugin
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'pull_request' && 'pr-approval' || null }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 10
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build frontend
+        run: |
+          pnpm run build
+
+      - name: Install Decky CLI
+        run: |
+          mkdir -p cli
+          curl -L -o cli/decky "https://github.com/SteamDeckHomebrew/cli/releases/latest/download/decky-linux-x86_64"
+          chmod +x cli/decky
+
+      - name: Build plugin
+        run: |
+          ./cli/decky plugin build $(pwd)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Colorblind
+          path: out/Colorblind.zip
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Colorblind
+          path: out
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/Colorblind.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
