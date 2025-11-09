@@ -1,11 +1,11 @@
 {
   "name": "Colorblind",
   "author": "John Conley",
-  "flags": ["_root"],
+  "flags": [],
   "api_version": 1,
   "publish": {
     "tags": ["accessibility", "colorblind", "visual", "display"],
-    "description": "Apply colorblind correction filters directly through gamescope (no reshade!). Supports protanopia, deuteranopia, and tritanopia correction modes.",
+    "description": "Apply colorblind correction filters directly through gamescope (no reshade performance hit!). Supports protanopia, deuteranopia, and tritanopia correction modes.",
     "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
   }
 }

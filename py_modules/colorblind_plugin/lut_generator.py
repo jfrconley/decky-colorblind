@@ -13,7 +13,7 @@ from typing import Tuple, List, Literal
 
 # Type aliases
 CBType = Literal["protanope", "deuteranope", "tritanope"]
-Operation = Literal["simulate", "daltonise", "correct"]
+Operation = Literal["simulate", "daltonise", "hue_shift"]
 
 
 class Vec3:
@@ -318,7 +318,7 @@ def daltonise(rgb: Vec3, cb_type: CBType, strength: float = 1.0) -> Vec3:
     return rgb_out.clamp()
 
 
-def correct(rgb: Vec3, cb_type: CBType, strength: float = 1.0) -> Vec3:
+def hue_shift(rgb: Vec3, cb_type: CBType, strength: float = 1.0) -> Vec3:
     """
     Apply custom correction for colorblind viewing.
 
@@ -405,7 +405,7 @@ def create_lut(
     transform_func = {
         "simulate": simulate,
         "daltonise": daltonise,
-        "correct": correct
+        "hue_shift": hue_shift
     }[operation]
 
     lut = []
@@ -515,7 +515,7 @@ def generate_lut(
     if cb_type not in valid_cb_types:
         raise ValueError(f"cb_type must be one of {valid_cb_types}")
 
-    valid_operations = ["simulate", "daltonise", "correct"]
+    valid_operations = ["simulate", "daltonise", "hue_shift"]
     if operation not in valid_operations:
         raise ValueError(f"operation must be one of {valid_operations}")
 

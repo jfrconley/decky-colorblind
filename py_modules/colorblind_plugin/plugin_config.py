@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Optional
 
 import colorblind_plugin as lib
@@ -8,12 +8,14 @@ from settings import SettingsManager
 
 @dataclass
 class CorrectionConfig:
-    """Strong-typed configuration for colorblind correction settings."""
     enabled: bool
     cb_type: lib.CBType
     operation: lib.Operation
     strength: float
     lut_size: int
+
+    def to_dict(self):
+        return asdict(self)
 
 
 class ColorBlindSettings:
@@ -41,8 +43,8 @@ class ColorBlindSettings:
     def get_game_config(self, app_id: Optional[str] = None) -> CorrectionConfig:
         key_scope = self._config_scope(app_id)
         enabled = self.settingsMgr.getSetting(f"{key_scope}.enabled", True)
-        cb_type = self.settingsMgr.getSetting(f"{key_scope}.cb_type", lib.CBType.DEUTERANOPIA)
-        operation = self.settingsMgr.getSetting(f"{key_scope}.operation", lib.Operation.SRGB)
+        cb_type = self.settingsMgr.getSetting(f"{key_scope}.cb_type", "deuteranope")
+        operation = self.settingsMgr.getSetting(f"{key_scope}.operation", "hue_shift")
         strength = self.settingsMgr.getSetting(f"{key_scope}.strength", 0.8)
         lut_size = self.settingsMgr.getSetting(f"{key_scope}.lut_size", 32)
 

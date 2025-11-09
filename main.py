@@ -1,12 +1,13 @@
 import json
 import os
 import subprocess
-from typing import Optional
+from typing import Optional, Generic, TypeVar
 import decky
 import asyncio
 import colorblind_plugin as lib
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 
+from colorblind_plugin import CorrectionConfig
 from colorblind_plugin.plugin_config import ColorBlindSettings
 
 
@@ -19,19 +20,36 @@ def _get_clean_env():
 
     return env
 
+ResultType = TypeVar('ResultType')
+
+
+@dataclass
+class Result(Generic[ResultType]):
+    result: Optional[ResultType]
+    err: Optional[str]
+    ok: bool
+
+    @staticmethod
+    def ok(result: ResultType):
+        return Result(ok=True, err=None, result=result)
+
+    @staticmethod
+    def err(err: str):
+        return Result(ok=False, err=err, result=None)
+
 
 class Plugin:
     _config = ColorBlindSettings()
     _clean_env = _get_clean_env()
 
-    async def apply_configuration(self, app_id: Optional[str]):
+    async def apply_configuration(self, app_id: Optional[str]) -> dict:
         """Apply the current configuration by generating and setting LUT."""
         correction_config = self._config.get_game_config(app_id)
 
         if not correction_config.enabled:
             decky.logger.info("Correction disabled, skipping LUT application")
             self.reset_look()
-            return
+            return asdict(Result.ok(None))
 
         lut_path = os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "lut.cube")
         decky.logger.info(f"Generating LUT: {correction_config.cb_type}, {correction_config.operation}, strength={correction_config.strength}")
@@ -45,24 +63,21 @@ class Plugin:
         )
         self.set_look(lut_path)
         decky.logger.info(f"LUT applied successfully")
+        return asdict(Result.ok(None))
 
-    async def update_configuration(self, enabled: bool, cb_type: str, operation: str, strength: float, lut_size: int, app_id: Optional[str]):
+    async def update_configuration(self, config: dict, app_id: Optional[str]) -> dict:
         """Update configuration from TypeScript."""
-        config = lib.CorrectionConfig(
-            enabled=enabled,
-            cb_type=cb_type,  # type: ignore
-            operation=operation,  # type: ignore
-            strength=strength,
-            lut_size=lut_size
-        )
+        decky.logger.info(f"Updating configuration for app_id={app_id}, config={config}")
+        config = CorrectionConfig(**config)
         self._config.update_game_config(config, app_id)
         decky.logger.info(f"Configuration updated for app_id={app_id}")
+        return asdict(Result.ok(None))
 
-    async def read_configuration(self, app_id: Optional[str]) -> str:
+    async def read_configuration(self, app_id: Optional[str]) -> dict:
         """Read configuration and return as dict for TypeScript."""
         config = self._config.get_game_config(app_id)
         # Convert dataclass to dict for JSON serialization
-        return json.dumps(asdict(config))
+        return asdict(Result.ok(config))
 
     # async def long_running(self):
     #     await asyncio.sleep(15)

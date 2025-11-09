@@ -18,7 +18,7 @@ import {FaEye} from "react-icons/fa";
 
 // TypeScript types matching Python backend
 type CBType = "protanope" | "deuteranope" | "tritanope";
-type Operation = "simulate" | "daltonise" | "correct";
+type Operation = "simulate" | "daltonise" | "hue_shift";
 
 interface CorrectionConfig {
     enabled: boolean;
@@ -28,29 +28,35 @@ interface CorrectionConfig {
     lut_size: number;
 }
 
+interface Result<T = null> {
+    ok: boolean;
+    err?: string;
+    result: T;
+}
+
 // Backend callable functions
-const readConfiguration = callable<[app_id: string | null], string>("read_configuration");
-const updateConfiguration = callable<[enabled: boolean, cb_type: CBType, operation: Operation, strength: number, lut_size: number, app_id: string | null], void>("update_configuration");
-const applyConfiguration = callable<[app_id: string | null], void>("apply_configuration");
+const readConfiguration = callable<[app_id: string | null], Result<CorrectionConfig>>("read_configuration");
+const updateConfiguration = callable<[config: CorrectionConfig, app_id: string | null], Result>("update_configuration");
+const applyConfiguration = callable<[app_id: string | null], Result>("apply_configuration");
 
 // Dropdown options
 const cbTypeOptions: DropdownOption[] = [
-    {data: "protanope", label: "Protanope (Red-Blind)"},
-    {data: "deuteranope", label: "Deuteranope (Green-Blind)"},
-    {data: "tritanope", label: "Tritanope (Blue-Blind)"},
+    {data: "protanope", label: "Protanope"},
+    {data: "deuteranope", label: "Deuteranope"},
+    {data: "tritanope", label: "Tritanope"},
 ];
 
 const operationOptions: DropdownOption[] = [
     {data: "simulate", label: "Simulate"},
     {data: "daltonise", label: "Daltonise"},
-    {data: "correct", label: "Correct"},
+    {data: "hue_shift", label: "Hue Shift"},
 ];
 
 const Content: FunctionComponent = () => {
     // State for form values
     const [enabled, setEnabled] = useState<boolean>(true);
     const [cbType, setCbType] = useState<CBType>("deuteranope");
-    const [operation, setOperation] = useState<Operation>("correct");
+    const [operation, setOperation] = useState<Operation>("hue_shift");
     const [strength, setStrength] = useState<number>(1.0);
 
     // State for UI
@@ -58,7 +64,7 @@ const Content: FunctionComponent = () => {
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [hasChanges, setHasChanges] = useState<boolean>(false);
 
-    // TODO: Implement per-game detection
+    // TODO: Implement per-game customization
     // For now, using GLOBAL config (app_id = null)
     const currentAppId = null;
 
@@ -71,7 +77,8 @@ const Content: FunctionComponent = () => {
         try {
             setIsLoading(true);
             console.log("Loading configuration for app_id:", currentAppId)
-            const config = JSON.parse(await readConfiguration(currentAppId));
+            const config = (await readConfiguration(currentAppId)).result;
+
             console.log("Loaded configuration:", config)
 
             setEnabled(config.enabled);
@@ -95,11 +102,8 @@ const Content: FunctionComponent = () => {
         try {
             setIsSaving(true);
 
-            // Save configuration with individual parameters
-            await updateConfiguration(enabled, cbType, operation, strength, 32, currentAppId);
-
+            await updateConfiguration({enabled, cb_type: cbType, operation, strength, lut_size: 32}, currentAppId);
             await applyConfiguration(currentAppId);
-
             setHasChanges(false);
 
             toaster.toast({
@@ -124,7 +128,7 @@ const Content: FunctionComponent = () => {
 
     if (isLoading) {
         return (
-            <PanelSection title="Colorblind Correction">
+            <PanelSection>
                 <PanelSectionRow>
                     <div>Loading configuration...</div>
                 </PanelSectionRow>
@@ -133,11 +137,11 @@ const Content: FunctionComponent = () => {
     }
 
     return (
-        <PanelSection title="Colorblind Correction">
+        <PanelSection>
             {/* Enable toggle */}
             <PanelSectionRow>
                 <ToggleField
-                    label="Enable Correction"
+                    label="Enable"
                     checked={enabled}
                     onChange={(value) => {
                         setEnabled(value);
@@ -150,6 +154,7 @@ const Content: FunctionComponent = () => {
             <PanelSectionRow>
                 <Field
                     label="Colorblind Type"
+                    description="Type of colorblindness to correct for"
                     childrenLayout="below"
                     childrenContainerWidth="max"
                 >
@@ -169,6 +174,7 @@ const Content: FunctionComponent = () => {
             <PanelSectionRow>
                 <Field
                     label="Operation"
+                    description="Type of correction to apply"
                     childrenLayout="below"
                     childrenContainerWidth="max"
                 >
@@ -188,6 +194,7 @@ const Content: FunctionComponent = () => {
             <PanelSectionRow>
                 <SliderField
                     label="Strength"
+                    description="Intensity of the color correction"
                     value={strength}
                     min={0}
                     max={1}
