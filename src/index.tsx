@@ -117,29 +117,6 @@ const Content: FunctionComponent = () => {
         }
     };
 
-    const handleReset = async () => {
-        try {
-            setIsSaving(true);
-
-            // Reset to defaults with individual parameters
-            await updateConfiguration(true, "deuteranope", "correct", 1.0, 32, currentAppId);
-            await loadConfig();
-
-            toaster.toast({
-                title: "Reset",
-                body: "Configuration reset to defaults",
-            });
-        } catch (error) {
-            console.error("Failed to reset configuration:", error);
-            toaster.toast({
-                title: "Error",
-                body: "Failed to reset configuration",
-            });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     // Track changes
     const markChanged = () => {
         setHasChanges(true);
@@ -233,17 +210,6 @@ const Content: FunctionComponent = () => {
                     {isSaving ? "Applying..." : hasChanges ? "Apply Changes" : "No Changes"}
                 </ButtonItem>
             </PanelSectionRow>
-
-            {/*/!* Reset button *!/*/}
-            {/*<PanelSectionRow>*/}
-            {/*    <ButtonItem*/}
-            {/*        layout="below"*/}
-            {/*        onClick={handleReset}*/}
-            {/*        disabled={isSaving}*/}
-            {/*    >*/}
-            {/*        Reset to Defaults*/}
-            {/*    </ButtonItem>*/}
-            {/*</PanelSectionRow>*/}
         </PanelSection>
     );
 };

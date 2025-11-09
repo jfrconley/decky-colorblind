@@ -1,9 +1,9 @@
 """
 colorblind LUT generator.
 
-This module generates 3D Look-Up Tables (LUTs) for colorblind correction,
-simulation, and daltonization. It's a pure Python port of https://github.com/andrewwillmott/colour-blind-luts
-credit to Andrew Willmott for the original implementation.
+This module generates 3D LUTs for colorblind correction, simulation, and daltonization.
+It's a pure Python port of https://github.com/andrewwillmott/colour-blind-luts
+Full credit to Andrew Willmott for the original implementation.
 Modified to return .cube format luts for use with gamescope.
 """
 

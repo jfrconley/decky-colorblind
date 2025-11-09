@@ -6,24 +6,27 @@ import decky
 import asyncio
 import colorblind_plugin as lib
 from dataclasses import asdict
-from settings import SettingsManager
+
+from colorblind_plugin.plugin_config import ColorBlindSettings
+
+
+def _get_clean_env():
+    """Get environment with cleared LD_LIBRARY_PATH to fix decky-loader subprocess issues"""
+    env = os.environ.copy()
+    env["LD_LIBRARY_PATH"] = ""
+    # XDG_RUNTIME_DIR must be set otherwise gamescopectl won't be able to detect the display
+    env["XDG_RUNTIME_DIR"] = "/run/user/1000"
+
+    return env
+
 
 class Plugin:
-    # config = lib.ConfigManager()
-    settings = SettingsManager("settings", settings_directory=decky.DECKY_PLUGIN_SETTINGS_DIR)
-
-
-    def _get_clean_env(self):
-        """Get environment with cleared LD_LIBRARY_PATH to fix decky-loader subprocess issues"""
-        env = os.environ.copy()
-        env["LD_LIBRARY_PATH"] = ""
-        env["XDG_RUNTIME_DIR"] = "/run/user/1000"
-
-        return env
+    _config = ColorBlindSettings()
+    _clean_env = _get_clean_env()
 
     async def apply_configuration(self, app_id: Optional[str]):
         """Apply the current configuration by generating and setting LUT."""
-        correction_config = self.config.get_config(app_id)
+        correction_config = self._config.get_game_config(app_id)
 
         if not correction_config.enabled:
             decky.logger.info("Correction disabled, skipping LUT application")
@@ -52,12 +55,12 @@ class Plugin:
             strength=strength,
             lut_size=lut_size
         )
-        self.config.set_config(config, app_id)
+        self._config.update_game_config(config, app_id)
         decky.logger.info(f"Configuration updated for app_id={app_id}")
 
     async def read_configuration(self, app_id: Optional[str]) -> str:
         """Read configuration and return as dict for TypeScript."""
-        config = self.config.get_config(app_id)
+        config = self._config.get_game_config(app_id)
         # Convert dataclass to dict for JSON serialization
         return json.dumps(asdict(config))
 
@@ -66,34 +69,30 @@ class Plugin:
     #     # Passing through a bunch of random data, just as an example
     #     await decky.emit("timer_event", "Hello from the backend!", True, 2)
     #
-    # # Asyncio-compatible long-running code, executed in a task when the plugin is loaded
+
     async def _main(self):
         self.loop = asyncio.get_event_loop()
         decky.logger.info("Starting colorblind")
         decky.migrate_runtime()
         await self.apply_configuration(None)
 
-    # # Function called first during the unload process, utilize this to handle your plugin being stopped, but not
-    # # completely removed
     async def _unload(self):
         decky.logger.info("Resetting looks system")
-        lib.look_config.reset_look()
+        self.reset_look()
         pass
-    #
-    # Function called after `_unload` during uninstall, utilize this to clean up processes and other remnants of your
-    # plugin that may remain on the system
+
     async def _uninstall(self):
         decky.logger.info("Resetting looks system")
-        lib.look_config.reset_look()
+        self.reset_look()
         pass
 
     def set_look(self, filename: str):
         decky.logger.info(f"Setting look to {filename}")
         result =  subprocess.run(
-            ["/usr/bin/gamescopectl","set_look", filename], env=self._get_clean_env(), text=True, capture_output=True)
-        decky.logger.info(f"set_look exit code {result.returncode}")
-        decky.logger.info(f"set_look stderr {result.stderr}")
-        decky.logger.info(f"set_look stdout {result.stdout}")
+            ["/usr/bin/gamescopectl","set_look", filename], env=self._clean_env, text=True, capture_output=True)
+        decky.logger.debug(f"set_look exit code {result.returncode}")
+        decky.logger.debug(f"set_look stderr {result.stderr}")
+        decky.logger.debug(f"set_look stdout {result.stdout}")
 
     def reset_look(self):
         self.set_look("")
