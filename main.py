@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import time
 from typing import Optional, Generic, TypeVar
 import decky
 import asyncio
@@ -54,6 +55,7 @@ class Plugin:
         lut_path = os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "lut.cube")
         decky.logger.info(f"Generating LUT: {correction_config.cb_type}, {correction_config.operation}, strength={correction_config.strength}")
 
+        start_time = time.time()
         lib.lut_generator.generate_lut(
             cb_type=correction_config.cb_type,
             operation=correction_config.operation,
@@ -61,9 +63,16 @@ class Plugin:
             output_path=lut_path,
             lut_size=correction_config.lut_size
         )
-        self.set_look(lut_path)
-        decky.logger.info(f"LUT applied successfully")
-        return asdict(Result.ok(None))
+        end_time = time.time()
+        elapsed = (end_time - start_time) * 1000
+        decky.logger.info(f"LUT generation took {elapsed:.2f}ms")
+
+        result = self.set_look(lut_path)
+        if not result.ok:
+            decky.logger.info(f"Failed to apply LUT: {result.err}")
+        else:
+            decky.logger.info(f"LUT applied successfully")
+        return asdict(result)
 
     async def update_configuration(self, config: dict, app_id: Optional[str]) -> dict:
         """Update configuration from TypeScript."""
@@ -78,12 +87,6 @@ class Plugin:
         config = self._config.get_game_config(app_id)
         # Convert dataclass to dict for JSON serialization
         return asdict(Result.ok(config))
-
-    # async def long_running(self):
-    #     await asyncio.sleep(15)
-    #     # Passing through a bunch of random data, just as an example
-    #     await decky.emit("timer_event", "Hello from the backend!", True, 2)
-    #
 
     async def _main(self):
         self.loop = asyncio.get_event_loop()
@@ -101,42 +104,17 @@ class Plugin:
         self.reset_look()
         pass
 
-    def set_look(self, filename: str):
+    def set_look(self, filename: str) -> Result[None]:
         decky.logger.info(f"Setting look to {filename}")
         result =  subprocess.run(
             ["/usr/bin/gamescopectl","set_look", filename], env=self._clean_env, text=True, capture_output=True)
         decky.logger.debug(f"set_look exit code {result.returncode}")
         decky.logger.debug(f"set_look stderr {result.stderr}")
         decky.logger.debug(f"set_look stdout {result.stdout}")
+        if result.returncode != 0:
+            return Result.err(f"set_look failed: returncode={result.returncode} stderr={result.stderr}")
+        return Result.ok(None)
 
     def reset_look(self):
         self.set_look("")
-
-
-
-
-
-    #
-    # # async def start_timer(self):
-    # #     self.loop.create_task(self.long_running())
-    #
-    # # Migrations that should be performed before entering `_main()`.
-    # async def _migration(self):
-    #     decky.logger.info("Migrating")
-    #     # Here's a migration example for logs:
-    #     # - `~/.config/decky-template/template.log` will be migrated to `decky.decky_LOG_DIR/template.log`
-    #     decky.migrate_logs(os.path.join(decky.DECKY_USER_HOME,
-    #                                            ".config", "decky-template", "template.log"))
-    #     # Here's a migration example for settings:
-    #     # - `~/homebrew/settings/template.json` is migrated to `decky.decky_SETTINGS_DIR/template.json`
-    #     # - `~/.config/decky-template/` all files and directories under this root are migrated to `decky.decky_SETTINGS_DIR/`
-    #     decky.migrate_settings(
-    #         os.path.join(decky.DECKY_HOME, "settings", "template.json"),
-    #         os.path.join(decky.DECKY_USER_HOME, ".config", "decky-template"))
-    #     # Here's a migration example for runtime data:
-    #     # - `~/homebrew/template/` all files and directories under this root are migrated to `decky.decky_RUNTIME_DIR/`
-    #     # - `~/.local/share/decky-template/` all files and directories under this root are migrated to `decky.decky_RUNTIME_DIR/`
-    #     decky.migrate_runtime(
-    #         os.path.join(decky.DECKY_HOME, "template"),
-    #         os.path.join(decky.DECKY_USER_HOME, ".local", "share", "decky-template"))
 

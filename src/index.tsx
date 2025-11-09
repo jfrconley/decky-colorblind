@@ -16,7 +16,6 @@ import {
 import {useState, useEffect, FunctionComponent} from "react";
 import {FaEye} from "react-icons/fa";
 
-// TypeScript types matching Python backend
 type CBType = "protanope" | "deuteranope" | "tritanope";
 type Operation = "simulate" | "daltonise" | "hue_shift";
 
@@ -103,13 +102,21 @@ const Content: FunctionComponent = () => {
             setIsSaving(true);
 
             await updateConfiguration({enabled, cb_type: cbType, operation, strength, lut_size: 32}, currentAppId);
-            await applyConfiguration(currentAppId);
-            setHasChanges(false);
+            const applyResult = await applyConfiguration(currentAppId);
 
-            toaster.toast({
-                title: "Success",
-                body: "Colorblind correction applied",
-            });
+            if (!applyResult.ok) {
+                console.error("Failed to apply configuration:", applyResult.err);
+                toaster.toast({
+                    title: "Error",
+                    body: "Failed to apply configuration",
+                });
+            } else {
+                setHasChanges(false);
+                toaster.toast({
+                    title: "Success",
+                    body: "Colorblind correction applied",
+                });
+            }
         } catch (error) {
             console.error("Failed to apply configuration:", error);
             toaster.toast({
