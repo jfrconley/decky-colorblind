@@ -24,6 +24,8 @@
             "command": "which pnpm && pnpm i",
             "problemMatcher": []
         },
+
+
         //Preliminary "All-in-one" setup task
         {
             "label": "setup",

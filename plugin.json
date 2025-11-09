@@ -1,11 +1,11 @@
 {
-  "name": "Example Plugin",
-  "author": "John Doe",
-  "flags": ["debug", "_root"],
+  "name": "Colorblind",
+  "author": "John Conley",
+  "flags": ["_root"],
   "api_version": 1,
   "publish": {
-    "tags": ["template", "root"],
-    "description": "Decky example plugin.",
+    "tags": ["accessibility", "colorblind", "visual", "display"],
+    "description": "Apply colorblind correction filters directly through gamescope (no reshade!). Supports protanopia, deuteranopia, and tritanopia correction modes.",
     "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
   }
 }

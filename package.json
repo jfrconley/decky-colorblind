@@ -1,7 +1,7 @@
 {
-  "name": "decky-plugin-template",
-  "version": "0.0.1",
-  "description": "A template to quickly create decky plugins from scratch, based on TypeScript and webpack",
+  "name": "decky-colorblind",
+  "version": "0.1.0",
+  "description": "Decky plugin for Steam Deck that applies colorblind correction using 3D LUTs and gamescopectl",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
@@ -10,29 +10,36 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SteamDeckHomebrew/decky-plugin-template.git"
+    "url": "git+https://github.com/jfrconley/decky-colorblind.git"
   },
   "keywords": [
     "decky",
     "plugin",
-    "plugin-template",
     "steam-deck",
-    "deck"
+    "deck",
+    "colorblind",
+    "accessibility",
+    "color-correction",
+    "lut",
+    "protanopia",
+    "deuteranopia",
+    "tritanopia"
   ],
-  "author": "You <you@you.tld>",
+  "author": "John Conley <jfrconley@github>",
   "license": "BSD-3-Clause",
   "bugs": {
-    "url": "https://github.com/SteamDeckHomebrew/decky-plugin-template/issues"
+    "url": "https://github.com/jfrconley/decky-colorblind/issues"
   },
-  "homepage": "https://github.com/SteamDeckHomebrew/decky-plugin-template#readme",
+  "homepage": "https://github.com/jfrconley/decky-colorblind#readme",
   "devDependencies": {
     "@decky/rollup": "^1.0.1",
-    "@decky/ui": "^4.7.2",
+    "@decky/ui": "^4.11.0",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
     "@types/webpack": "^5.28.5",
     "rollup": "^4.22.5",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "@rollup/rollup-linux-x64-musl": "^4.22.5"
   },
   "dependencies": {
     "@decky/api": "^1.1.2",

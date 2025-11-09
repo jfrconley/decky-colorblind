@@ -1,115 +1,264 @@
 import {
-  ButtonItem,
-  PanelSection,
-  PanelSectionRow,
-  Navigation,
-  staticClasses
+    ButtonItem,
+    PanelSection,
+    PanelSectionRow,
+    ToggleField,
+    SliderField,
+    Dropdown,
+    DropdownOption,
+    Field,
 } from "@decky/ui";
 import {
-  addEventListener,
-  removeEventListener,
-  callable,
-  definePlugin,
-  toaster,
-  // routerHook
-} from "@decky/api"
-import { useState } from "react";
-import { FaShip } from "react-icons/fa";
+    callable,
+    definePlugin,
+    toaster,
+} from "@decky/api";
+import {useState, useEffect, FunctionComponent} from "react";
+import {FaEye} from "react-icons/fa";
 
-// import logo from "../assets/logo.png";
+// TypeScript types matching Python backend
+type CBType = "protanope" | "deuteranope" | "tritanope";
+type Operation = "simulate" | "daltonise" | "correct";
 
-// This function calls the python function "add", which takes in two numbers and returns their sum (as a number)
-// Note the type annotations:
-//  the first one: [first: number, second: number] is for the arguments
-//  the second one: number is for the return value
-const add = callable<[first: number, second: number], number>("add");
+interface CorrectionConfig {
+    enabled: boolean;
+    cb_type: CBType;
+    operation: Operation;
+    strength: number;
+    lut_size: number;
+}
 
-// This function calls the python function "start_timer", which takes in no arguments and returns nothing.
-// It starts a (python) timer which eventually emits the event 'timer_event'
-const startTimer = callable<[], void>("start_timer");
+// Backend callable functions
+const readConfiguration = callable<[app_id: string | null], string>("read_configuration");
+const updateConfiguration = callable<[enabled: boolean, cb_type: CBType, operation: Operation, strength: number, lut_size: number, app_id: string | null], void>("update_configuration");
+const applyConfiguration = callable<[app_id: string | null], void>("apply_configuration");
 
-function Content() {
-  const [result, setResult] = useState<number | undefined>();
+// Dropdown options
+const cbTypeOptions: DropdownOption[] = [
+    {data: "protanope", label: "Protanope (Red-Blind)"},
+    {data: "deuteranope", label: "Deuteranope (Green-Blind)"},
+    {data: "tritanope", label: "Tritanope (Blue-Blind)"},
+];
 
-  const onClick = async () => {
-    const result = await add(Math.random(), Math.random());
-    setResult(result);
-  };
+const operationOptions: DropdownOption[] = [
+    {data: "simulate", label: "Simulate"},
+    {data: "daltonise", label: "Daltonise"},
+    {data: "correct", label: "Correct"},
+];
 
-  return (
-    <PanelSection title="Panel Section">
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={onClick}
-        >
-          {result ?? "Add two numbers via Python"}
-        </ButtonItem>
-      </PanelSectionRow>
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={() => startTimer()}
-        >
-          {"Start Python timer"}
-        </ButtonItem>
-      </PanelSectionRow>
+const Content: FunctionComponent = () => {
+    // State for form values
+    const [enabled, setEnabled] = useState<boolean>(true);
+    const [cbType, setCbType] = useState<CBType>("deuteranope");
+    const [operation, setOperation] = useState<Operation>("correct");
+    const [strength, setStrength] = useState<number>(1.0);
 
-      {/* <PanelSectionRow>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <img src={logo} />
-        </div>
-      </PanelSectionRow> */}
+    // State for UI
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [isSaving, setIsSaving] = useState<boolean>(false);
+    const [hasChanges, setHasChanges] = useState<boolean>(false);
 
-      {/*<PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={() => {
-            Navigation.Navigate("/decky-plugin-test");
-            Navigation.CloseSideMenus();
-          }}
-        >
-          Router
-        </ButtonItem>
-      </PanelSectionRow>*/}
-    </PanelSection>
-  );
+    // TODO: Implement per-game detection
+    // For now, using GLOBAL config (app_id = null)
+    const currentAppId = null;
+
+    // Load configuration on mount
+    useEffect(() => {
+        loadConfig();
+    }, []);
+
+    const loadConfig = async () => {
+        try {
+            setIsLoading(true);
+            console.log("Loading configuration for app_id:", currentAppId)
+            const config = JSON.parse(await readConfiguration(currentAppId));
+            console.log("Loaded configuration:", config)
+
+            setEnabled(config.enabled);
+            setCbType(config.cb_type);
+            setOperation(config.operation);
+            setStrength(config.strength);
+            setHasChanges(false);
+        } catch (error) {
+            console.error("Failed to load configuration:", error);
+            toaster.toast({
+                title: "Error",
+                body: "Failed to load configuration",
+            });
+        } finally {
+            console.log("Finished loading configuration")
+            setIsLoading(false);
+        }
+    };
+
+    const handleApply = async () => {
+        try {
+            setIsSaving(true);
+
+            // Save configuration with individual parameters
+            await updateConfiguration(enabled, cbType, operation, strength, 32, currentAppId);
+
+            await applyConfiguration(currentAppId);
+
+            setHasChanges(false);
+
+            toaster.toast({
+                title: "Success",
+                body: "Colorblind correction applied",
+            });
+        } catch (error) {
+            console.error("Failed to apply configuration:", error);
+            toaster.toast({
+                title: "Error",
+                body: "Failed to apply configuration",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleReset = async () => {
+        try {
+            setIsSaving(true);
+
+            // Reset to defaults with individual parameters
+            await updateConfiguration(true, "deuteranope", "correct", 1.0, 32, currentAppId);
+            await loadConfig();
+
+            toaster.toast({
+                title: "Reset",
+                body: "Configuration reset to defaults",
+            });
+        } catch (error) {
+            console.error("Failed to reset configuration:", error);
+            toaster.toast({
+                title: "Error",
+                body: "Failed to reset configuration",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Track changes
+    const markChanged = () => {
+        setHasChanges(true);
+    };
+
+    if (isLoading) {
+        return (
+            <PanelSection title="Colorblind Correction">
+                <PanelSectionRow>
+                    <div>Loading configuration...</div>
+                </PanelSectionRow>
+            </PanelSection>
+        );
+    }
+
+    return (
+        <PanelSection title="Colorblind Correction">
+            {/* Enable toggle */}
+            <PanelSectionRow>
+                <ToggleField
+                    label="Enable Correction"
+                    checked={enabled}
+                    onChange={(value) => {
+                        setEnabled(value);
+                        markChanged();
+                    }}
+                />
+            </PanelSectionRow>
+
+            {/* Colorblind type dropdown */}
+            <PanelSectionRow>
+                <Field
+                    label="Colorblind Type"
+                    childrenLayout="below"
+                    childrenContainerWidth="max"
+                >
+                    <Dropdown
+                        rgOptions={cbTypeOptions}
+                        selectedOption={cbType}
+                        onChange={(option) => {
+                            console.log("Colorblind type changed to:", option.data);
+                            setCbType(option.data as CBType);
+                            markChanged();
+                        }}
+                    />
+                </Field>
+            </PanelSectionRow>
+
+            {/* Operation mode dropdown */}
+            <PanelSectionRow>
+                <Field
+                    label="Operation"
+                    childrenLayout="below"
+                    childrenContainerWidth="max"
+                >
+                    <Dropdown
+                        rgOptions={operationOptions}
+                        selectedOption={operation}
+                        onChange={(option) => {
+                            console.log("Operation changed to:", option.data);
+                            setOperation(option.data as Operation);
+                            markChanged();
+                        }}
+                    />
+                </Field>
+            </PanelSectionRow>
+
+            {/* Strength slider */}
+            <PanelSectionRow>
+                <SliderField
+                    label="Strength"
+                    value={strength}
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    onChange={(value) => {
+                        setStrength(value);
+                        markChanged();
+                    }}
+                    showValue={true}
+                />
+            </PanelSectionRow>
+
+            {/* Apply button */}
+            <PanelSectionRow>
+                <ButtonItem
+                    layout="below"
+                    onClick={handleApply}
+                    disabled={isSaving || !hasChanges}
+                >
+                    {isSaving ? "Applying..." : hasChanges ? "Apply Changes" : "No Changes"}
+                </ButtonItem>
+            </PanelSectionRow>
+
+            {/*/!* Reset button *!/*/}
+            {/*<PanelSectionRow>*/}
+            {/*    <ButtonItem*/}
+            {/*        layout="below"*/}
+            {/*        onClick={handleReset}*/}
+            {/*        disabled={isSaving}*/}
+            {/*    >*/}
+            {/*        Reset to Defaults*/}
+            {/*    </ButtonItem>*/}
+            {/*</PanelSectionRow>*/}
+        </PanelSection>
+    );
 };
 
 export default definePlugin(() => {
-  console.log("Template plugin initializing, this is called once on frontend startup")
+    console.log("Colorblind Correction plugin initializing");
 
-  // serverApi.routerHook.addRoute("/decky-plugin-test", DeckyPluginRouterTest, {
-  //   exact: true,
-  // });
-
-  // Add an event listener to the "timer_event" event from the backend
-  const listener = addEventListener<[
-    test1: string,
-    test2: boolean,
-    test3: number
-  ]>("timer_event", (test1, test2, test3) => {
-    console.log("Template got timer_event with:", test1, test2, test3)
-    toaster.toast({
-      title: "template got timer_event",
-      body: `${test1}, ${test2}, ${test3}`
-    });
-  });
-
-  return {
-    // The name shown in various decky menus
-    name: "Test Plugin",
-    // The element displayed at the top of your plugin's menu
-    titleView: <div className={staticClasses.Title}>Decky Example Plugin</div>,
-    // The content of your plugin's menu
-    content: <Content />,
-    // The icon displayed in the plugin list
-    icon: <FaShip />,
-    // The function triggered when your plugin unloads
-    onDismount() {
-      console.log("Unloading")
-      removeEventListener("timer_event", listener);
-      // serverApi.routerHook.removeRoute("/decky-plugin-test");
-    },
-  };
+    return {
+        name: "Colorblind Correction",
+        titleView: <div>Colorblind Correction</div>,
+        content: <Content/>,
+        alwaysRender: true,
+        icon: <FaEye/>,
+        onDismount() {
+            console.log("Colorblind Correction plugin unloading");
+        },
+    };
 });

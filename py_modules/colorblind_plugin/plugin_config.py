@@ -7,11 +7,11 @@ Manages global plugin settings and per-game LUT configurations using INI files.
 import decky
 import configparser
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from typing import Optional
 
 # Import types from lut_generator
-from py_modules.lut_generator import CBType, Operation
+from colorblind_plugin import CBType, Operation
 
 
 @dataclass
