@@ -5,8 +5,10 @@ import os
 # and add the `decky-loader/plugin/imports` path to `python.analysis.extraPaths` in `.vscode/settings.json`
 import decky
 import asyncio
+from py_modules import lut_config
 
 class Plugin:
+
     # A normal method. It can be called from the TypeScript side using @decky/api.
     async def add(self, left: int, right: int) -> int:
         return left + right
@@ -20,6 +22,7 @@ class Plugin:
     async def _main(self):
         self.loop = asyncio.get_event_loop()
         decky.logger.info("Hello World!")
+        decky.migrate_runtime()
 
     # Function called first during the unload process, utilize this to handle your plugin being stopped, but not
     # completely removed
@@ -30,11 +33,12 @@ class Plugin:
     # Function called after `_unload` during uninstall, utilize this to clean up processes and other remnants of your
     # plugin that may remain on the system
     async def _uninstall(self):
-        decky.logger.info("Goodbye World!")
+        decky.logger.info("Resetting looks system")
+        lut_config.reset_look()
         pass
 
-    async def start_timer(self):
-        self.loop.create_task(self.long_running())
+    # async def start_timer(self):
+    #     self.loop.create_task(self.long_running())
 
     # Migrations that should be performed before entering `_main()`.
     async def _migration(self):
@@ -55,3 +59,4 @@ class Plugin:
         decky.migrate_runtime(
             os.path.join(decky.DECKY_HOME, "template"),
             os.path.join(decky.DECKY_USER_HOME, ".local", "share", "decky-template"))
+
