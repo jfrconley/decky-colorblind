@@ -52,7 +52,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Colorblind
+          name: Colorblind.zip
           path: out/Colorblind.zip
           if-no-files-found: error
 
@@ -68,7 +68,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: Colorblind
+          name: Colorblind.zip
           path: out
 
       - name: Create Release
