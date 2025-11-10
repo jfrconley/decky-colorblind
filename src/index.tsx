@@ -33,6 +33,7 @@ interface Result<T = null> {
     result: T;
 }
 
+
 // Backend callable functions
 const readConfiguration = callable<[app_id: string | null], Result<CorrectionConfig>>("read_configuration");
 const updateConfiguration = callable<[config: CorrectionConfig, app_id: string | null], Result>("update_configuration");
@@ -57,6 +58,7 @@ const Content: FunctionComponent = () => {
     const [cbType, setCbType] = useState<CBType>("deuteranope");
     const [operation, setOperation] = useState<Operation>("hue_shift");
     const [strength, setStrength] = useState<number>(1.0);
+    const [lutSize, setLutSize] = useState<number>(32);
 
     // State for UI
     const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -84,6 +86,7 @@ const Content: FunctionComponent = () => {
             setCbType(config.cb_type);
             setOperation(config.operation);
             setStrength(config.strength);
+            setLutSize(config.lut_size);
             setHasChanges(false);
         } catch (error) {
             console.error("Failed to load configuration:", error);
@@ -101,7 +104,7 @@ const Content: FunctionComponent = () => {
         try {
             setIsSaving(true);
 
-            await updateConfiguration({enabled, cb_type: cbType, operation, strength, lut_size: 32}, currentAppId);
+            await updateConfiguration({enabled, cb_type: cbType, operation, strength, lut_size: lutSize}, currentAppId);
             const applyResult = await applyConfiguration(currentAppId);
 
             if (!applyResult.ok) {
@@ -214,6 +217,18 @@ const Content: FunctionComponent = () => {
                 />
             </PanelSectionRow>
 
+            <PanelSectionRow>
+                <ToggleField
+                    label="Use Hi-Res LUT"
+                    checked={lutSize === 64}
+                    onChange={(value) => {
+                        setLutSize(value ? 64 : 32);
+                        markChanged();
+                    }}
+                    description="Use larger for more accurate results"
+                />
+            </PanelSectionRow>
+
             {/* Apply button */}
             <PanelSectionRow>
                 <ButtonItem
@@ -229,16 +244,17 @@ const Content: FunctionComponent = () => {
 };
 
 export default definePlugin(() => {
-    console.log("Colorblind Correction plugin initializing");
+    console.log("Colorblind plugin initializing");
 
     return {
-        name: "Colorblind Correction",
-        titleView: <div>Colorblind Correction</div>,
+        name: "Colorblind",
+        titleView: <div>Colorblind</div>,
         content: <Content/>,
         alwaysRender: true,
         icon: <FaEye/>,
+
         onDismount() {
-            console.log("Colorblind Correction plugin unloading");
+            console.log("Colorblind plugin unloading");
         },
     };
 });

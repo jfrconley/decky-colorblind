@@ -16,6 +16,7 @@ to avoid brightness loss.
 - Supports both hue-shift and daltonize correction
 - Simulate colorblindness
 - Low performance impact
+- Works across all games and the UI (in game-mode)
 
 ## Installation
 

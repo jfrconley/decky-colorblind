@@ -88,6 +88,9 @@ class Plugin:
         # Convert dataclass to dict for JSON serialization
         return asdict(Result.ok(config))
 
+    def __int__(self):
+        self.apply_configuration(None)
+
     async def _main(self):
         self.loop = asyncio.get_event_loop()
         decky.logger.info("Starting colorblind")
