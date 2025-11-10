@@ -23,7 +23,6 @@ def _get_clean_env():
 
 ResultType = TypeVar('ResultType')
 
-
 @dataclass
 class Result(Generic[ResultType]):
     result: Optional[ResultType]
@@ -88,13 +87,14 @@ class Plugin:
         # Convert dataclass to dict for JSON serialization
         return asdict(Result.ok(config))
 
-    def __int__(self):
-        self.apply_configuration(None)
-
     async def _main(self):
         self.loop = asyncio.get_event_loop()
         decky.logger.info("Starting colorblind")
         decky.migrate_runtime()
+        await self.apply_configuration(None)
+
+    async def _load(self):
+        decky.logger.info("Starting colorblind")
         await self.apply_configuration(None)
 
     async def _unload(self):
